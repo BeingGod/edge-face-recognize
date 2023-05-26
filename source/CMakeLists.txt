@@ -1,0 +1,1 @@
+add_executable(edge_face_recognize main.cpp)

@@ -1,4 +1,9 @@
+# ignore configure files
 .vscode
-build/
+# ignore log files
+log/
+# ignore build files
 cmake-build-debug/
 cmake-build-release/
+third_party/qtbase-release
+third_party/opencv-release
