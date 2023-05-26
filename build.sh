@@ -8,7 +8,6 @@ set -e
 function build()
 {
     # build dir
-    BUILD_DIR=""
     if [ $BUILD_TYPE="Debug" ]; then
         BUILD_DIR="$SCRIPT_HOME/cmake-build-debug"
     else
@@ -20,14 +19,16 @@ function build()
     bash $SCRIPT_HOME/scripts/build_cv.sh
     
     # build self
+    rm -rf $BUILD_DIR
     mkdir -p $BUILD_DIR
     cd $BUILD_DIR
 
     cmake -D CMAKE_BUILD_TYPE=$BUILD_TYPE \
         -D CMAKE_SYSTEM_PROCESSOR=arm64 \
         -D CMAKE_OSX_ARCHITECTURES=arm64 \
+        -D CMAKE_INSTALL_PREFIX=$BUILD_DIR \
         ..
 
-    make -j7
+    make install -j7
 }
 build
