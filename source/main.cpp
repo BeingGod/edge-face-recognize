@@ -1,17 +1,12 @@
-#include "opencv2/videoio.hpp"
-#include <iostream>
+#include "mainwindow.h"
 
+#include <QApplication>
 
 int main(int argc, char* argv[])
 {
-  cv::VideoCapture cap(0);
+  QApplication app(argc, argv);
+  MainWindow   w;
+  w.show();
 
-  if (cap.isOpened()) {
-    std::cout << "open camera success!" << std::endl;
-  }
-  else {
-    std::cout << "open camera failed!" << std::endl;
-  }
-
-  return 0;
+  return app.exec();
 }

@@ -16,12 +16,6 @@
 [submodule "third_party/qtbase"]
 	path = third_party/qtbase
 	url = https://github.com/qt/qtbase.git
-[submodule "third_party/opencv"]
-	path = third_party/opencv
-	url = https://github.com/opencv/opencv.git
 [submodule "third_party/gtest"]
 	path = third_party/gtest
 	url = https://github.com/google/googletest.git
-[submodule "third_party/cpp-base64"]
-	path = third_party/cpp-base64
-	url = https://github.com/ReneNyffenegger/cpp-base64.git
