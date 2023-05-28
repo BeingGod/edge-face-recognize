@@ -5,8 +5,8 @@
 
 namespace request {
 
-bool get(const std::string& url, std::string& params, const cJSON* response);
+std::string get(const std::string& url, std::string& params);
 
-bool post(const std::string& url, const cJSON* params, const cJSON* response);
+std::string post(const std::string& url, const cJSON* params);
 
 }   // namespace request

@@ -90,7 +90,7 @@
      <set>Qt::AlignCenter</set>
     </property>
    </widget>
-   <widget class="QLabel" name="lblClassroomId">
+   <widget class="QLabel" name="lblStudentName">
     <property name="geometry">
      <rect>
       <x>520</x>
@@ -126,7 +126,7 @@
      </font>
     </property>
     <property name="text">
-     <string>教室ID</string>
+     <string>学生姓名</string>
     </property>
     <property name="alignment">
      <set>Qt::AlignCenter</set>
@@ -189,7 +189,7 @@
      </font>
     </property>
     <property name="text">
-     <string>出勤人数</string>
+     <string>签到状态</string>
     </property>
     <property name="alignment">
      <set>Qt::AlignCenter</set>
@@ -221,7 +221,7 @@
      <string>人脸识别</string>
     </property>
    </widget>
-   <widget class="QLabel" name="lblSignStudentNum">
+   <widget class="QLabel" name="lblSignStatus">
     <property name="geometry">
      <rect>
       <x>520</x>
@@ -249,7 +249,7 @@
      <x>0</x>
      <y>0</y>
      <width>825</width>
-     <height>23</height>
+     <height>36</height>
     </rect>
    </property>
   </widget>

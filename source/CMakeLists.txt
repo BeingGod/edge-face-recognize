@@ -1,3 +1,5 @@
+configure_file(config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config.h)
+
 file(
   GLOB_RECURSE UTILS_SRCS
   RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}

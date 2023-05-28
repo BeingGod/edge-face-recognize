@@ -2,8 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 
 project(edge_face_recognize VERSION 0.0.0 LANGUAGES CXX)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
-set(CMAKE_C_COMPILER "/usr/bin/clang")
-set(CMAKE_CXX_COMPILER "/usr/bin/clang++")
+
 
 cmake_policy(SET CMP0077 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
@@ -30,6 +29,8 @@ option(BACKEND_ONNXRUNTIME "set ONNXRuntime as the main backend of lite.ai.toolk
 option(BACKEND_MNN "set MNN as the main backend of lite.ai.toolkit" OFF)  # now, OFF only
 option(BACKEND_NCNN "set NCNN as the main backend of lite.ai.toolkit" ON)  # now, OFF only
 option(BACKEND_TNN "set TNN as the main backend of lite.ai.toolkit" OFF)  # now, OFF only
+# dummy option
+option(INSTALL_PATH "dummy option, for configure_file" on)
 
 # dependencies path 
 set(QT_PREFIX_PATH "${CMAKE_SOURCE_DIR}/third_party/qtbase-release")
@@ -70,3 +71,16 @@ include(lite.ai.toolkit/command)
 add_subdirectory(source)
 
 install(TARGETS ${TARGET_NAME} DESTINATION bin COMPONENT binaries)
+
+# copy config file
+install(FILES 
+    ${CMAKE_SOURCE_DIR}/resource/config.json
+    DESTINATION conf)
+
+# copy model files
+install(FILES 
+    ${CMAKE_SOURCE_DIR}/resource/models/mobile_facenet.opt.bin
+    ${CMAKE_SOURCE_DIR}/resource/models/mobile_facenet.opt.param
+    ${CMAKE_SOURCE_DIR}/resource/models/retinaface_mobile0.25.opt.bin
+    ${CMAKE_SOURCE_DIR}/resource/models/retinaface_mobile0.25.opt.param
+    DESTINATION models)

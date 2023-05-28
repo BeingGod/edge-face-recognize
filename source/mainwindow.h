@@ -9,6 +9,7 @@
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/videoio/videoio.hpp>
+#include <string>
 
 
 namespace Ui {
@@ -25,43 +26,25 @@ public:
   ~MainWindow();
 
 private slots:
-  void on_btnOpenCam_clicked();
+  void onBtnOpenCamClicked();
 
-  void on_btnCloseCam_clicked();
+  void onBtnCloseCamClicked();
 
-  void on_btnStartCapture_clicked();
+  void onBtnStartCaptureClicked();
 
-  void slot_on_timer_timeout();
+  void onTimerTimeout();
 
 private:
   Ui::MainWindow*  ui;
   cv::VideoCapture capture;
-  //    QTimer *timer;
+  QTimer*          timer;
 
 public:
-  /**
-   * @brief 主函数
-   *
-   * @param frame 输入图像
-   * @param vis 可视化结果
-   * @param sign_students 到场学生
-   * @return true
-   * @return false
-   */
-  bool detect(cv::Mat& frame, cv::Mat& vis, std::vector<std::string>& sign_students);
+  bool detect(cv::Mat& frame, cv::Mat& vis, std::string& student_name,
+              std::string& attendence_status);
 
-  /**
-   * @brief Get the Classroom Id object
-   *
-   * @return int
-   */
   int getClassroomId() { return _classroom_id; }
 
-  /**
-   * @brief Get the Resonse Msg object
-   *
-   * @return std::string&
-   */
   std::string& getResonseMsg() { return _response_msg; }
 
 private:
@@ -104,56 +87,19 @@ private:
     }
   } RecognizeModelConfig;   // 人脸识别模型配置
 
-  /**
-   * @brief 读取配置文件
-   *
-   * @param config_path
-   */
   void loadConfig(const std::string& config_path);
 
-  /**
-   * @brief 初始化人脸检测模型
-   *
-   * @param thread_nums
-   */
   void initFaceDetectModel(const int thread_nums);
 
-  /**
-   * @brief 初始化人脸识别模型
-   *
-   * @param thread_nums
-   */
   void initFaceRecognizeModel(const int thread_nums);
 
-  /**
-   * @brief 检测人脸
-   *
-   * @param img
-   * @param vis
-   * @param detected_boxes
-   */
   void detectFace(const cv::Mat& img, cv::Mat& vis, std::vector<lite::types::Boxf>& detected_boxes);
 
-  /**
-   * @brief 人脸编码
-   *
-   * @param img
-   * @param detected_box
-   * @param face_content
-   */
   void encodeFace(const cv::Mat& img, const lite::types::Boxf& detected_box,
                   lite::types::FaceContent& face_content);
 
-  /**
-   * @brief 更新考勤状态
-   *
-   * @param face_contents
-   * @param students
-   * @return true
-   * @return false
-   */
-  bool requestUpdateAttendenceStatus(const std::vector<lite::types::FaceContent>& face_contents,
-                                     std::vector<std::string>                     students);
+  bool requestUpdateAttendenceStatus(const lite::types::FaceContent& face_content,
+                                     std::string& student_name, std::string& attendence_status);
 
 private:
   uint32_t _classroom_id;

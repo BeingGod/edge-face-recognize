@@ -1,5 +1,5 @@
 #!/bin/bash
-BUILD_TYPE="Release"
+BUILD_TYPE=$1
 SCRIPT_HOME=$(cd $(dirname $0); pwd)
 LOG_FILE=$SCRIPT_HOME/log/build.log
 source $SCRIPT_HOME/scripts/log.sh
@@ -25,6 +25,8 @@ function build()
     cmake -D CMAKE_BUILD_TYPE=$BUILD_TYPE \
         -D CMAKE_SYSTEM_PROCESSOR=arm64 \
         -D CMAKE_OSX_ARCHITECTURES=arm64 \
+        -D CMAKE_C_COMPILER=`which clang` \
+        -D CMAKE_CXX_COMPILER=`which clang++` \
         -D CMAKE_INSTALL_PREFIX=$BUILD_DIR \
         -D CMAKE_EXPORT_COMPILE_COMMANDS=1 \
         -D CMAKE_VERBOSE_MAKEFILE=1 \
