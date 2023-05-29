@@ -32,6 +32,6 @@ function build()
         -D CMAKE_VERBOSE_MAKEFILE=1 \
         ..
 
-    make install -j7
+    make install -j4
 }
 build

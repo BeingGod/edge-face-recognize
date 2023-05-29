@@ -46,4 +46,7 @@ target_link_libraries(
 
     # opencv
     ${OpenCV_LIBRARIES}
+
+    # pthread
+    pthread
 )

@@ -2,14 +2,17 @@
 #define MAINWINDOW_H
 
 #include "lite/lite.h"
+#include "lite/types.h"
 
 #include <glog/logging.h>
 
 #include <QMainWindow>
 
+#include <mutex>
 #include <opencv2/opencv.hpp>
 #include <opencv2/videoio/videoio.hpp>
 #include <string>
+#include <thread>
 
 
 namespace Ui {
@@ -26,22 +29,21 @@ public:
   ~MainWindow();
 
 private slots:
-  void onBtnOpenCamClicked();
-
-  void onBtnCloseCamClicked();
+  void onBtnRequestClicked();
 
   void onBtnStartCaptureClicked();
 
-  void onTimerTimeout();
+  void onBtnStopCaptureClicked();
+
+  void onCaptureTimerTimeout();
 
 private:
-  Ui::MainWindow*  ui;
-  cv::VideoCapture capture;
-  QTimer*          timer;
+  Ui::MainWindow*  _ui;
+  cv::VideoCapture _capture;
+  QTimer*          _capture_timer;
 
 public:
-  bool detect(cv::Mat& frame, cv::Mat& vis, std::string& student_name,
-              std::string& attendence_status);
+  bool detect(cv::Mat& frame, cv::Mat& vis, lite::types::FaceContent& face_content);
 
   int getClassroomId() { return _classroom_id; }
 
@@ -93,16 +95,16 @@ private:
 
   void initFaceRecognizeModel(const int thread_nums);
 
-  void detectFace(const cv::Mat& img, cv::Mat& vis, std::vector<lite::types::Boxf>& detected_boxes);
-
-  void encodeFace(const cv::Mat& img, const lite::types::Boxf& detected_box,
-                  lite::types::FaceContent& face_content);
-
-  bool requestUpdateAttendenceStatus(const lite::types::FaceContent& face_content,
-                                     std::string& student_name, std::string& attendence_status);
+  void requestUpdateAttendenceStatus(const lite::types::FaceContent& face_content);
 
 private:
+  uint8_t _cap_device_id;
+
   uint32_t _classroom_id;
+
+  lite::ncnn::cv::face::detect::RetinaFace* _face_detect_model = nullptr;
+
+  lite::ncnn::cv::faceid::MobileFaceNet* _face_recognize_model = nullptr;
 
   std::string _response_msg;
 
@@ -112,9 +114,11 @@ private:
 
   DetectModelConfig _detect_model_config;
 
-  lite::ncnn::cv::face::detect::RetinaFace* _face_detect_model = nullptr;
+  std::mutex _qt_mtx;
 
-  lite::ncnn::cv::faceid::MobileFaceNet* _face_recognize_model = nullptr;
+  std::mutex _face_content_mtx;
+
+  lite::types::FaceContent _face_content;
 };
 
 #endif   // MAINWINDOW_H

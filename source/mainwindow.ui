@@ -56,19 +56,6 @@
      <set>Qt::AlignCenter</set>
     </property>
    </widget>
-   <widget class="QPushButton" name="btnOpenCam">
-    <property name="geometry">
-     <rect>
-      <x>120</x>
-      <y>40</y>
-      <width>161</width>
-      <height>51</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>打开摄像头</string>
-    </property>
-   </widget>
    <widget class="QLabel" name="label">
     <property name="geometry">
      <rect>
@@ -195,30 +182,17 @@
      <set>Qt::AlignCenter</set>
     </property>
    </widget>
-   <widget class="QPushButton" name="btnCloseCam">
-    <property name="geometry">
-     <rect>
-      <x>310</x>
-      <y>40</y>
-      <width>171</width>
-      <height>51</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>关闭摄像头</string>
-    </property>
-   </widget>
    <widget class="QPushButton" name="btnStartCapture">
     <property name="geometry">
      <rect>
-      <x>510</x>
+      <x>110</x>
       <y>40</y>
       <width>171</width>
       <height>51</height>
      </rect>
     </property>
     <property name="text">
-     <string>人脸识别</string>
+     <string>开始识别</string>
     </property>
    </widget>
    <widget class="QLabel" name="lblSignStatus">
@@ -240,6 +214,32 @@
     </property>
     <property name="alignment">
      <set>Qt::AlignCenter</set>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnStopCapture">
+    <property name="geometry">
+     <rect>
+      <x>330</x>
+      <y>40</y>
+      <width>161</width>
+      <height>51</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>暂停识别</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btnRequest">
+    <property name="geometry">
+     <rect>
+      <x>540</x>
+      <y>40</y>
+      <width>161</width>
+      <height>51</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>发送请求</string>
     </property>
    </widget>
   </widget>

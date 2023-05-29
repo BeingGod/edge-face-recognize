@@ -20,7 +20,7 @@ public:
 private:
   const float                mean_vals[3] = {127.5f, 127.5f, 127.5f};   // RGB
   const float                norm_vals[3] = {1.f / 128.0f, 1.f / 128.0f, 1.f / 128.0f};
-  static constexpr const int input_width  = 96;
+  static constexpr const int input_width  = 112;
   static constexpr const int input_height = 112;
 
 private:

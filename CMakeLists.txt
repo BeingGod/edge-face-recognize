@@ -81,6 +81,6 @@ install(FILES
 install(FILES 
     ${CMAKE_SOURCE_DIR}/resource/models/mobile_facenet.opt.bin
     ${CMAKE_SOURCE_DIR}/resource/models/mobile_facenet.opt.param
-    ${CMAKE_SOURCE_DIR}/resource/models/retinaface_mobile0.25.opt.bin
-    ${CMAKE_SOURCE_DIR}/resource/models/retinaface_mobile0.25.opt.param
+    ${CMAKE_SOURCE_DIR}/resource/models/retinaface_mobile0.25-640-640.opt.bin
+    ${CMAKE_SOURCE_DIR}/resource/models/retinaface_mobile0.25-640-640.opt.param
     DESTINATION models)

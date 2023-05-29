@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "config.h"
 #include "lite/types.h"
+#include "lite/utils.h"
 #include "request/request.h"
 #include "status_code.h"
 #include "ui_mainwindow.h"
@@ -21,10 +22,13 @@
 #include <cstddef>
 #include <glog/logging.h>
 #include <iostream>
+#include <mutex>
+#include <opencv2/core/types.hpp>
 #include <opencv2/videoio.hpp>
 #include <qpushbutton.h>
 #include <qtimer.h>
 #include <string>
+#include <thread>
 
 
 static bool detectBoxSortBySize(const lite::types::Boxf& box1, const lite::types::Boxf& box2)
@@ -58,6 +62,7 @@ static std::string getFormatDate()
   strftime(datetime, 200, "%Y-%m-%d %H:%M:%S", tm_now);
 
   return std::string(datetime);
+  // return std::string("2023-05-29 9:24:00");
 }
 
 // Mat转成QImage
@@ -95,9 +100,9 @@ static QImage MatImageToQt(const cv::Mat& src)
 
 MainWindow::MainWindow(QWidget* parent)
   : QMainWindow(parent)
-  , ui(new Ui::MainWindow)
+  , _ui(new Ui::MainWindow)
 {
-  ui->setupUi(this);
+  _ui->setupUi(this);
 
   const int threads = 1;
 
@@ -121,17 +126,19 @@ MainWindow::MainWindow(QWidget* parent)
 
   LOG(INFO) << "===========GUI Init Success!============";
 
-  timer = new QTimer(this);
+  _capture_timer = new QTimer(this);
 
-  connect(ui->btnOpenCam, &QPushButton::clicked, this, &MainWindow::onBtnOpenCamClicked);
-  connect(ui->btnCloseCam, &QPushButton::clicked, this, &MainWindow::onBtnCloseCamClicked);
-  connect(ui->btnStartCapture, &QPushButton::clicked, this, &MainWindow::onBtnStartCaptureClicked);
-  connect(timer, &QTimer::timeout, this, &MainWindow::onTimerTimeout);
+  connect(_ui->btnStartCapture, &QPushButton::clicked, this, &MainWindow::onBtnStartCaptureClicked);
+  connect(_ui->btnStopCapture, &QPushButton::clicked, this, &MainWindow::onBtnStopCaptureClicked);
+  connect(_ui->btnRequest, &QPushButton::clicked, this, &MainWindow::onBtnRequestClicked);
+  connect(_capture_timer, &QTimer::timeout, this, &MainWindow::onCaptureTimerTimeout);
 }
 
 MainWindow::~MainWindow()
 {
-  if (capture.isOpened()) capture.release();
+  if (_capture.isOpened()) {
+    _capture.release();
+  }
   if (_face_detect_model) {
     delete _face_detect_model;
     _face_detect_model = nullptr;
@@ -142,77 +149,77 @@ MainWindow::~MainWindow()
   }
 }
 
-void MainWindow::onBtnOpenCamClicked()
+void MainWindow::onBtnRequestClicked()
 {
-  if (capture.open(0)) {
-    capture.set(cv::CAP_PROP_FPS, 30);
-    capture.set(cv::CAP_PROP_FRAME_WIDTH, 640);
-    capture.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
-    LOG(INFO) << "cam is opened";
-    ui->lblCapStatus->setText("opened");
+  lite::types::FaceContent face_content;
+  {
+    std::unique_lock<std::mutex> lock(_face_content_mtx);
+    face_content = _face_content;
+  }
 
-    timer->start(33);
+  for (int i = 0; i < face_content.dim; i++) {
+    std::cout << face_content.embedding[i] << ",";
   }
-  else {
-    LOG(INFO) << "cam is not opened";
-    capture.release();
-  }
+  std::cout << std::endl;
+
+  std::thread t(&MainWindow::requestUpdateAttendenceStatus, this, face_content);
+  t.detach();
 }
 
-
-void MainWindow::onBtnCloseCamClicked()
+void MainWindow::onBtnStopCaptureClicked()
 {
-  timer->stop();
+  _capture_timer->stop();
 
-  ui->lblCapStatus->setText("closed");
-  capture.release();
+  _ui->lblImage->clear();
+  _ui->lblCapStatus->setText("关闭");
+  _capture.release();
 
   LOG(INFO) << "cam is closed";
 }
 
 void MainWindow::onBtnStartCaptureClicked()
 {
-  cv::Mat frame;
-  QImage  qimage;
-  if (!capture.isOpened()) {
-    QMessageBox::critical(NULL, "error", "not open camera", QMessageBox::Yes, QMessageBox::Yes);
-    return;
+  if (_capture.open(_cap_device_id) && _capture.set(cv::CAP_PROP_FPS, 30) &&
+      _capture.set(cv::CAP_PROP_FRAME_WIDTH, 640) && _capture.set(cv::CAP_PROP_FRAME_HEIGHT, 480)) {
+    LOG(INFO) << "cam is opened";
+    _ui->lblCapStatus->setText("开启");
+
+    _capture_timer->start(33);
+  }
+  else {
+    LOG(INFO) << "cam is not opened";
+
+    cv::Mat frame;
+    QImage  qimage;
+    if (!_capture.isOpened()) {
+      QMessageBox::critical(NULL, "error", "not open camera", QMessageBox::Yes, QMessageBox::Yes);
+      return;
+    }
   }
 
-  capture >> frame;
-  if (frame.empty()) {
-    LOG(ERROR) << "capture frame failed!";
-    return;
-  }
-
-  qimage = MatImageToQt(frame);
-  ui->lblImage->setPixmap(QPixmap::fromImage(qimage));
-  cv::Mat vis;
-
-  std::string student_name, attendence_status;
-  detect(frame, vis, student_name, attendence_status);
-
-  std::string response_msg = getResonseMsg();
-
-  qimage = MatImageToQt(vis);
-  ui->lblImage->setPixmap(QPixmap::fromImage(qimage));
-  ui->lblResponseMsg->setText(QString::fromStdString(response_msg));
-  ui->lblStudentName->setText(QString::fromStdString(student_name));
-  ui->lblSignStatus->setText(QString::fromStdString(attendence_status));
+  return;
 }
 
-void MainWindow::onTimerTimeout()
+
+void MainWindow::onCaptureTimerTimeout()
 {
   cv::Mat frame;
-  capture >> frame;
+  _capture >> frame;
 
   if (frame.empty()) {
     LOG(WARNING) << "frame is empty";
   }
   else {
-    LOG(WARNING) << frame.size;
+    if (!detect(frame, frame, _face_content)) {
+      // not detect face -> return directly
+      QImage qimage = MatImageToQt(frame);
+      _ui->lblImage->setPixmap(QPixmap::fromImage(qimage));
+
+      return;
+    };
+
     QImage qimage = MatImageToQt(frame);
-    ui->lblImage->setPixmap(QPixmap::fromImage(qimage));
+    _ui->lblImage->setPixmap(QPixmap::fromImage(qimage));
   }
 }
 
@@ -231,6 +238,7 @@ void MainWindow::loadConfig(const std::string& config_path)
   cJSON* recognize_model_node = cJSON_GetObjectItem(root, "recognize_model");
   cJSON* classroom_id_node    = cJSON_GetObjectItem(root, "classroom_id");
   cJSON* base_url_node        = cJSON_GetObjectItem(root, "base_url");
+  cJSON* cap_device_id_node   = cJSON_GetObjectItem(root, "cap_device_id");
 
   _detect_model_config.path =
     std::string(cJSON_GetObjectItem(detect_model_node, "path")->valuestring);
@@ -248,8 +256,9 @@ void MainWindow::loadConfig(const std::string& config_path)
   _recognize_model_config.sim_threshold =
     cJSON_GetObjectItem(recognize_model_node, "sim_threshold")->valuedouble;
 
-  _classroom_id = classroom_id_node->valueint;
-  _base_url     = std::string(base_url_node->valuestring);
+  _classroom_id  = classroom_id_node->valueint;
+  _base_url      = std::string(base_url_node->valuestring);
+  _cap_device_id = cap_device_id_node->valueint;
 
   _detect_model_config.print();
   _recognize_model_config.print();
@@ -286,41 +295,7 @@ void MainWindow::initFaceRecognizeModel(const int threads)
     install_path + param_path, install_path + bin_path, threads);
 }
 
-void MainWindow::detectFace(const cv::Mat& img, cv::Mat& vis,
-                            std::vector<lite::types::Boxf>& detected_boxes)
-{
-  // LOG(INFO) << "Detecting face..."
-  _face_detect_model->detect(img,
-                             detected_boxes,
-                             _detect_model_config.conf_thres,
-                             _detect_model_config.iou_thres,
-                             _detect_model_config.topk);
-
-  vis = lite::utils::draw_boxes(img, detected_boxes);
-
-  LOG(INFO) << "Retinaface Detected Face Num: " << detected_boxes.size();
-}
-
-void MainWindow::encodeFace(const cv::Mat& img, const lite::types::Boxf& detected_box,
-                            lite::types::FaceContent& face_content)
-{
-  LOG(INFO) << "Encoding face...";
-  cv::Rect rect = detected_box.rect();
-
-  // 边界处理
-  rect.x = rect.x < 0 ? 0 : rect.x;
-  rect.y = rect.y < 0 ? 0 : rect.y;
-  rect.x = rect.x >= img.cols ? img.cols : rect.x;
-  rect.y = rect.y >= img.rows ? img.rows : rect.y;
-
-  cv::Mat face = img(rect);
-
-  _face_recognize_model->detect(face, face_content);
-}
-
-bool MainWindow::requestUpdateAttendenceStatus(const lite::types::FaceContent& face_content,
-                                               std::string&                    student_name,
-                                               std::string&                    attendence_status)
+void MainWindow::requestUpdateAttendenceStatus(const lite::types::FaceContent& face_content)
 {
   const std::string url = "/attendance/update";
 
@@ -335,6 +310,8 @@ bool MainWindow::requestUpdateAttendenceStatus(const lite::types::FaceContent& f
                   formatedEmbedding.length(),
                   false);
 
+  LOG(INFO) << "base64: " << base64_face_content;
+
   std::string now = getFormatDate();
   LOG(INFO) << "Request Date: " << now;
 
@@ -344,7 +321,7 @@ bool MainWindow::requestUpdateAttendenceStatus(const lite::types::FaceContent& f
   cJSON_AddNumberToObject(root, "classroomId", _classroom_id);
   cJSON_AddNumberToObject(root, "threshold", _recognize_model_config.sim_threshold);
 
-  std::string result = request::post(_base_url + "/attendence/update", root);
+  std::string result = request::post(_base_url + "/attendance/update", root);
   // free params
   cJSON_Delete(root);
 
@@ -358,38 +335,77 @@ bool MainWindow::requestUpdateAttendenceStatus(const lite::types::FaceContent& f
 
     cJSON_Delete(result_json);
 
-    return false;
+    std::unique_lock<std::mutex> lock(_qt_mtx);
+    _ui->lblResponseMsg->setText(QString::fromStdString(_response_msg));
+    _ui->lblSignStatus->setText(QString::fromStdString(""));
+    _ui->lblStudentName->setText(QString::fromStdString(""));
+
+    return;
   }
 
   cJSON* data = cJSON_GetObjectItem(result_json, "data");
 
-  _response_msg     = "request success";
-  student_name      = cJSON_GetObjectItem(data, "name")->valuestring;
-  attendence_status = cJSON_GetObjectItem(data, "status")->valuestring;
+  _response_msg                 = "请求成功";
+  std::string student_name      = cJSON_GetObjectItem(data, "name")->valuestring;
+  std::string attendence_status = cJSON_GetObjectItem(data, "status")->valuestring;
 
   cJSON_Delete(result_json);
 
-  return true;
+  std::unique_lock<std::mutex> lock(_qt_mtx);
+  _ui->lblResponseMsg->setText(QString::fromStdString(_response_msg));
+  _ui->lblSignStatus->setText(QString::fromStdString(attendence_status));
+  _ui->lblStudentName->setText(QString::fromStdString(student_name));
 }
 
-bool MainWindow::detect(cv::Mat& frame, cv::Mat& vis, std::string& student_name,
-                        std::string& attendence_status)
+bool MainWindow::detect(cv::Mat& frame, cv::Mat& vis, lite::types::FaceContent& face_content)
 {
+  if (&frame != &vis) {
+    vis = frame.clone();
+  }
+
   std::vector<lite::types::Boxf> detected_boxes;
 
-  detectFace(frame, vis, detected_boxes);
+  LOG(INFO) << "Detecting face...";
+  _face_detect_model->detect(frame,
+                             detected_boxes,
+                             _detect_model_config.conf_thres,
+                             _detect_model_config.iou_thres,
+                             _detect_model_config.topk);
 
   if (detected_boxes.size() == 0) {   // 检测人脸
     LOG(WARNING) << "Not detected face !";
+
     return false;
   }
 
+  LOG(INFO) << "Retinaface Detected Face Num: " << detected_boxes.size();
+
+  // sort by face area from max to min
   std::sort(detected_boxes.begin(), detected_boxes.end(), detectBoxSortBySize);
 
-  auto                     box = detected_boxes[0];
-  lite::types::FaceContent face_content;
-  encodeFace(frame, box, face_content);
+  auto box = detected_boxes[0];
 
-  // send http request
-  return requestUpdateAttendenceStatus(face_content, student_name, attendence_status);
+  LOG(INFO) << "Encoding face...";
+  cv::Rect rect = box.rect();
+
+  int x1 = rect.tl().x < 0 ? 0 : rect.tl().x;
+  int y1 = rect.tl().y < 0 ? 0 : rect.tl().y;
+
+  int x2 = rect.br().x >= frame.cols ? frame.cols - 1 : rect.br().x;
+  int y2 = rect.br().y >= frame.rows ? frame.rows - 1 : rect.br().y;
+
+  cv::Rect roi(cv::Point(x1, y1), cv::Point(x2, y2));
+
+  cv::Mat face = frame(roi);
+  _face_recognize_model->detect(face, face_content);
+
+  // draw face detect result
+  if (&frame != &vis) {
+    vis = lite::utils::draw_boxes(frame, detected_boxes);
+  }
+  else {
+    lite::utils::draw_boxes_inplace(frame, detected_boxes);
+  }
+
+  return true;
 }
