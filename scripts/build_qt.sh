@@ -1,6 +1,6 @@
 #!/bin/bash
 SCRIPT_HOME=$(cd $(dirname $0); pwd)
-LOG_FILE=$SCRIPT_HOME/../log/build.log
+LOG_FILE=$SCRIPT_HOME/../build.log
 source $SCRIPT_HOME/log.sh
 set -e
 
